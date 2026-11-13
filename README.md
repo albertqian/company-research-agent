@@ -1,27 +1,38 @@
-# Company Research Agent
+# Job Search Prep Agent
 
-A password-protected Streamlit app that prepares job seekers for a specific company, using Claude Haiku. It is built to keep costs low: news and job postings come from free sources, and only the product overview uses a paid web search (at most 1 per run).
+A password-protected Streamlit app that turns a resume into interview-ready company prep. A main agent (plain Python) runs focused Claude Haiku sub-agents, several of them in parallel. News and job postings come from free sources; only one paid web search runs per company.
 
-**For any company it returns:**
-- **Fit score (0–100):** skills match 50%, domain match 30%, years of experience 20%. Scored against the real job descriptions when the company posts on a supported job board.
-- **Best-fit roles:** up to 3 postings from the company's free Greenhouse, Lever or Ashby job board, only when the candidate is a strong fit (match ≥ 75). If none fit, the tab is hidden. Each role has a **Prep for this role** button that maps the job's requirements to the resume, plans for gaps, and builds role-specific questions and a 60-second pitch.
-- **Interview prep:** talking points, likely questions with how to answer, and questions to ask them.
-- **Product news:** the top 5 product news items from the last 30 days, taken from the free Google News feed and ranked by Claude.
-- **Product overview:** products, customers, competitors.
+## How it works
 
-**Paste a job description:** for roles on Workday or other career sites (e.g. Salesforce). Paste the job description to get the same analysis, with the fit score measured against that exact posting, plus **Prep for this role**.
+**1. Submit a resume → Analyze resume**
+- **Resume Profiler** turns the resume into a compact profile: headline, years, seniority, domains, skills, achievements. Every other sub-agent uses this profile instead of the full resume, which keeps token costs down.
+- **Company Scout** suggests 8 target companies. Companies with a live Greenhouse, Lever or Ashby job board are marked 🟢 and listed first.
 
-**Suggest mode:** proposes 8 companies from the resume. Companies with a live job board are marked 🟢 and listed first.
+**2. Research a company** (from a suggestion or by name)
+```
+ parallel:  Product Researcher (1 web search)
+            job board → Role Matcher
+            Google News RSS → News Ranker
+ then:      Fit Scorer
+ then:      Interview Coach
+```
+- **Fit score (0–100):** skills match 50%, domain match 30%, years of experience 20%, plus gaps to prepare for.
+- **Best-fit roles:** up to 3 job-board postings that match strongly (≥ 75). Hidden if none qualify. Each has **Prep for this role**.
+- **Interview prep:** talking points, likely questions, answers for each gap, questions to ask them.
+- **Product news:** top 5 product news items from the last 30 days.
+- **Product overview:** products, customers, competitors, positioning.
 
-## Cost (estimates)
+**3. Paste a job description** — for Workday or other career sites (e.g. Salesforce). Same analysis, with the fit score measured against the pasted posting.
+
+Each run has a cost expander that breaks the cost down by sub-agent.
+
+## Cost (estimates, Haiku)
 | Action | Approx. cost |
 |---|---|
-| Company research | $0.05–0.08 |
-| Pasted job description analysis | $0.05–0.08 |
-| Prep for one role | $0.02–0.03 |
-| Suggestions | $0.01–0.02 |
-
-Each run shows its cost, and the sidebar shows the session total. Opening the same company again in a session doesn't charge twice.
+| Analyze resume (profile + suggestions) | ~$0.015 |
+| Company research | ~$0.06–0.07 |
+| Pasted job description | ~$0.06 |
+| Prep for one role | ~$0.01–0.02 |
 
 ---
 
@@ -32,43 +43,50 @@ Each run shows its cost, and the sidebar shows the session total. Opening the sa
 2. **Settings → Limits** → set a monthly spend limit.
 
 ### 2. GitHub (private repo)
-1. **github.com** → **+** → **New repository** → name `company-research-agent` → **Private** → **Create repository**.
-2. Click **uploading an existing file**, drag in all files and folders, then **Commit changes**.
+1. **github.com** → **+** → **New repository** → `company-research-agent` → **Private** → **Create repository**.
+2. Click **uploading an existing file**, drag in all files and folders (including `agents/`), then **Commit changes**.
 3. Hidden files (`.gitignore`, `.streamlit/secrets.toml.example`): create them with **Add file → Create new file**.
 
 ### 3. Streamlit Community Cloud
-1. **share.streamlit.io** → sign in with GitHub → **Create app**.
-2. Repo `your-username/company-research-agent` · Branch `main` · Main file `app.py`.
-3. **Advanced settings → Secrets**:
+1. **share.streamlit.io** → **Create app** → repo `your-username/company-research-agent`, branch `main`, main file `app.py`.
+2. **Advanced settings → Secrets**:
    ```toml
    ANTHROPIC_API_KEY = "sk-ant-your-key"
    APP_PASSWORD = "your-password"
    ```
-4. **Deploy**.
+3. **Deploy**.
 
 ## Settings (`config.py`)
 | Setting | Default | What it does |
 |---|---|---|
-| `MODEL` | `claude-haiku-5-5` | Switch to a Sonnet model ID for deeper output |
+| `AGENT_MODELS` | all Haiku | Model per sub-agent; e.g. set only `interview_coach` to Sonnet for deeper prep |
 | `FIT_WEIGHTS` | 0.5 / 0.3 / 0.2 | Fit score weights |
-| `NEWS_WINDOW_DAYS` | 30 | How far back news goes |
-| `NEWS_MAX_ITEMS` | 5 | Number of news items shown |
-| `ROLE_MIN_MATCH` | 75 | Minimum match score for a role to show |
-| `ROLE_MAX_SHOWN` | 3 | Maximum roles shown |
-| `MAX_SEARCHES_ANALYZE` | 1 | Paid web searches per company run |
+| `NEWS_WINDOW_DAYS` / `NEWS_MAX_ITEMS` | 30 / 5 | News window and count |
+| `ROLE_MIN_MATCH` / `ROLE_MAX_SHOWN` | 75 / 3 | Role match threshold and max roles shown |
+| `SUGGESTION_COUNT` | 8 | Companies suggested per resume |
+| `PRODUCT_MAX_SEARCHES` | 1 | Paid web searches per company |
 | `PRICE_*` | Haiku rates | Used only for the cost display; verify at claude.com/pricing |
 
 ## Known limits
-- **Roles** only come from Greenhouse, Lever and Ashby. Companies on Workday or custom career sites show no roles; use the **Paste a job description** tab for those. If roles look missing, enter the job board slug (e.g. `gong` from `boards.greenhouse.io/gong`).
-- **News** comes from the free Google News RSS feed. It has no official guarantee and may sometimes block cloud servers; when that happens, the news tab shows "No product news."
+- **Roles** come only from Greenhouse, Lever and Ashby. For Workday or custom sites, use **Paste a job description**. If roles look missing, enter the job board slug (e.g. `highspot` from `jobs.lever.co/highspot`).
+- **News** comes from the free Google News RSS feed. It has no official guarantee and may sometimes block cloud servers; the news tab then shows "No product news."
+- **Company Scout** works from the model's own knowledge without searching, so a suggestion may occasionally be out of date. The 🟢 badge confirms a live job board.
 
 ## Files
 ```
-app.py            Streamlit UI and password gate
-agent.py          Claude calls: role matching, analysis, role prep, suggestions
-job_boards.py     Free Greenhouse / Lever / Ashby postings
-news.py           Free Google News RSS
-resume_parser.py  .docx / .pdf → text
-config.py         All settings
-samples/          Default sample resume
+app.py                       Streamlit UI and password gate
+orchestrator.py              Main agent: runs sub-agents in order / in parallel
+agents/base.py               Shared Claude call, JSON parsing, cost math
+agents/resume_profiler.py    Resume → structured profile
+agents/company_scout.py      Target-company suggestions
+agents/role_matcher.py       Best-fit job-board postings
+agents/product_researcher.py Product overview (1 web search)
+agents/news_ranker.py        Top product news
+agents/fit_scorer.py         Skills / domain / experience scores
+agents/interview_coach.py    Company prep + role-specific prep
+job_boards.py                Free Greenhouse / Lever / Ashby postings
+news.py                      Free Google News RSS
+resume_parser.py             .docx / .pdf → text
+config.py                    All settings
+samples/                     Default sample resume
 ```

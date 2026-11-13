@@ -1,7 +1,16 @@
 """All tunable settings live here."""
 
-# Model: swap to a Sonnet model ID here if Haiku output feels thin.
-MODEL = "claude-haiku-5-5"
+# Model per sub-agent. Swap any one to a Sonnet model ID for deeper output there.
+DEFAULT_MODEL = "claude-haiku-5-5"
+AGENT_MODELS = {
+    "resume_profiler": DEFAULT_MODEL,
+    "company_scout": DEFAULT_MODEL,
+    "role_matcher": DEFAULT_MODEL,
+    "product_researcher": DEFAULT_MODEL,
+    "news_ranker": DEFAULT_MODEL,
+    "fit_scorer": DEFAULT_MODEL,
+    "interview_coach": DEFAULT_MODEL,
+}
 
 # Fit score weights (must add up to 1.0)
 FIT_WEIGHTS = {
@@ -18,13 +27,16 @@ NEWS_HEADLINES_TO_RANK = 40
 # Job-board roles: only show roles scoring at least this (0-100), max N roles.
 ROLE_MIN_MATCH = 75
 ROLE_MAX_SHOWN = 3
-MAX_JOB_TITLES = 150          # titles sent to Claude for matching
-JD_CHARS = 4000               # job description characters sent per matched role
+MAX_JOB_TITLES = 150          # titles sent to the Role Matcher
+JD_CHARS = 4000               # job description characters sent per role
 
-# Paid web searches (each costs $0.01). Only the product overview uses search.
-MAX_SEARCHES_ANALYZE = 1
+# Suggestions per resume.
+SUGGESTION_COUNT = 8
 
-MAX_OUTPUT_TOKENS = 6000
+# Paid web searches (each costs $0.01). Only the Product Researcher searches.
+PRODUCT_MAX_SEARCHES = 1
+
+MAX_OUTPUT_TOKENS = 4000
 
 # Price per million tokens, used only for the on-screen cost estimate.
 # Verify against https://claude.com/pricing and update if needed.
