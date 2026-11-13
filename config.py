@@ -10,18 +10,21 @@ FIT_WEIGHTS = {
     "experience": 0.20,
 }
 
-# Only keep news published within this many days.
-NEWS_WINDOW_DAYS = 90
+# News: only items from the last N days; show at most N items.
+NEWS_WINDOW_DAYS = 30
+NEWS_MAX_ITEMS = 5
+NEWS_HEADLINES_TO_RANK = 40
 
-# Web-search caps per run (each search costs $0.01).
-MAX_SEARCHES_ANALYZE = 8
-MAX_SEARCHES_SUGGEST = 4
+# Job-board roles: only show roles scoring at least this (0-100), max N roles.
+ROLE_MIN_MATCH = 75
+ROLE_MAX_SHOWN = 3
+MAX_JOB_TITLES = 150          # titles sent to Claude for matching
+JD_CHARS = 4000               # job description characters sent per matched role
 
-# Max tokens Claude may write per run.
-MAX_OUTPUT_TOKENS = 8000
+# Paid web searches (each costs $0.01). Only the product overview uses search.
+MAX_SEARCHES_ANALYZE = 1
 
-# Max job titles from a job board passed to Claude (keeps input tokens down).
-MAX_ATS_JOBS = 80
+MAX_OUTPUT_TOKENS = 6000
 
 # Price per million tokens, used only for the on-screen cost estimate.
 # Verify against https://claude.com/pricing and update if needed.
